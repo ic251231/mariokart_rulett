@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>マリオカート風 アイテムルーレット</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #0f172a; /* 深いダークブルーの背景 */
+            background-image: 
+                radial-gradient(circle at 50% 0%, #1e293b 0%, transparent 50%),
+                radial-gradient(circle at 50% 100%, #1e293b 0%, transparent 50%);
+            margin: 0;
+            overflow: hidden;
+            touch-action: manipulation; /* スマホでのダブルタップズーム防止 */
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* ネオン/虹色に光るアイテムボックスの外枠 */
+        .item-box-wrapper {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            padding: 8px;
+            border-radius: 32px;
+            background: linear-gradient(45deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+            background-size: 400% 400%;
+            animation: rainbow-bg 2.5s linear infinite;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.2), 
+                        inset 0 0 25px rgba(255, 255, 255, 0.8);
+        }
+
+        @keyframes rainbow-bg {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
+        }
+
+        /* スロットの表示枠（内側） */
+        .item-box-inner {
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 24px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        /* 縦スクロールするコンテナ */
+        .slot-container {
+            display: flex;
+            flex-direction: column;
+            will-change: transform;
+            /* モーションブラー用のトランジション設定 */
+            transition: filter 0.2s ease;
+        }
+
+        /* 高速回転時のモーションブラー効果 */
+        .is-spinning-fast {
+            filter: blur(3px);
+        }
+
+        /* 個別のアイテム枠 */
+        .slot-item {
+            width: 284px; /* 親(300) - padding(8*2) */
+            height: 284px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .slot-item img {
+            width: 85%;
+            height: 85%;
+            object-fit: contain;
+            filter: drop-shadow(0px 15px 15px rgba(0,0,0,0.4));
+        }
+
+        /* セレクトボックスのスタイリング */
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1.5em 1.5em;
+        }
+
+        /* 3D風スタートボタン */
+        .btn-start {
+            box-shadow: 0 8px 0 #9a3412, 0 15px 25px rgba(0,0,0,0.5);
+            transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-start:active {
+            box-shadow: 0 0px 0 #9a3412, 0 5px 10px rgba(0,0,0,0.5);
+            transform: translateY(8px);
+        }
+        .btn-start:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            box-shadow: 0 0px 0 #4b5563;
+            transform: translateY(8px);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-center items-center text-white">
+
+    <!-- タイトル -->
+    <h1 class="text-3xl md:text-4xl font-extrabold mb-6 tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 drop-shadow-[0_0_10px_rgba(56,189,248,0.8)] text-center">
+        ITEM ROULETTE
+    </h1>
+
+    <!-- 順位セレクター (ラジオボタンに変更) -->
+    <div class="mb-8 w-full max-w-md px-4">
+        <label class="block text-sm font-medium text-gray-300 mb-3 text-center">現在の順位を選択</label>
+        <div class="flex justify-center gap-4">
+            <label class="flex flex-col items-center cursor-pointer">
+                <input type="radio" name="rank" value="1" class="peer sr-only" checked>
+                <div class="w-16 h-16 rounded-full bg-gray-800 border-2 border-gray-600 flex items-center justify-center text-xl font-bold peer-checked:bg-blue-500 peer-checked:border-blue-300 peer-checked:text-white transition-all shadow-lg">1位</div>
+            </label>
+            <label class="flex flex-col items-center cursor-pointer">
+                <input type="radio" name="rank" value="2" class="peer sr-only">
+                <div class="w-16 h-16 rounded-full bg-gray-800 border-2 border-gray-600 flex items-center justify-center text-xl font-bold peer-checked:bg-blue-500 peer-checked:border-blue-300 peer-checked:text-white transition-all shadow-lg">2位</div>
+            </label>
+            <label class="flex flex-col items-center cursor-pointer">
+                <input type="radio" name="rank" value="3" class="peer sr-only">
+                <div class="w-16 h-16 rounded-full bg-gray-800 border-2 border-gray-600 flex items-center justify-center text-xl font-bold peer-checked:bg-blue-500 peer-checked:border-blue-300 peer-checked:text-white transition-all shadow-lg">3位</div>
+            </label>
+            <label class="flex flex-col items-center cursor-pointer">
+                <input type="radio" name="rank" value="4" class="peer sr-only">
+                <div class="w-16 h-16 rounded-full bg-gray-800 border-2 border-gray-600 flex items-center justify-center text-xl font-bold peer-checked:bg-blue-500 peer-checked:border-blue-300 peer-checked:text-white transition-all shadow-lg">4位</div>
+            </label>
+        </div>
+    </div>
+
+    <!-- ルーレット本体 -->
+    <div class="item-box-wrapper mb-10">
+        <div class="item-box-inner" id="slot-window">
+            <div class="slot-container" id="slot-container">
+                <!-- Javascriptでアイテムが挿入されます -->
+            </div>
+        </div>
+    </div>
+
+    <!-- スタートボタン -->
+    <button id="start-btn" class="btn-start px-12 py-5 bg-gradient-to-b from-orange-400 to-orange-600 hover:from-orange-300 hover:to-orange-500 text-white font-black text-3xl rounded-full tracking-widest outline-none select-none border-2 border-orange-300">
+        SPIN!
+    </button>
+
+    <script>
+        // 画像ファイルのリスト定義
+        const itemNames = {
+            blueShell: '青こうら.jpg',
+            redShell: '赤こうら.jpg',
+            mushroom: 'キノコ.jpg',
+            banana: 'バナナ.jpg',
+            greenShell: '緑こうら.jpg'
+        };
+        const items = Object.values(itemNames);
+
+        // 各要素の取得
+        const slotContainer = document.getElementById('slot-container');
+        const startBtn = document.getElementById('start-btn');
+        const itemHeight = 284; // CSSの.slot-itemの高さ
+
+        // 状態管理
+        let isSpinning = false;
+        let currentItem = items[Math.floor(Math.random() * items.length)];
+        let audioCtx;
+
+        // 初期表示
+        function init() {
+            renderSlot([currentItem]);
+        }
+
+        // HTML描画ヘルパー関数
+        function renderSlot(imageArray) {
+            slotContainer.innerHTML = imageArray.map(src => 
+                `<div class="slot-item"><img src="${src}" alt="item" onerror="this.src='https://placehold.co/250x250/eee/999?text=Item'"></div>`
+            ).join('');
+        }
+
+        // 順位に基づいた確率計算ロジック
+        function determineWinningItem(rank) {
+            let weights = {};
+
+            if (rank === 1) {
+                // 1位: バナナと緑こうらがほぼ100%
+                weights[itemNames.banana] = 60;
+                weights[itemNames.greenShell] = 40;
+                weights[itemNames.redShell] = 0;
+                weights[itemNames.mushroom] = 0;
+                weights[itemNames.blueShell] = 0;
+            } else if (rank === 2) {
+                // 2位: 赤こうらやバナナが高確率
+                weights[itemNames.banana] = 30;
+                weights[itemNames.greenShell] = 20;
+                weights[itemNames.redShell] = 50;
+                weights[itemNames.mushroom] = 0;
+                weights[itemNames.blueShell] = 0;
+            } else if (rank === 3) {
+                // 3位: キノコや赤こうらが高確率
+                weights[itemNames.banana] = 0;
+                weights[itemNames.greenShell] = 10;
+                weights[itemNames.redShell] = 40;
+                weights[itemNames.mushroom] = 50;
+                weights[itemNames.blueShell] = 0;
+            } else {
+                // 4位: 青こうらやキノコが高確率
+                weights[itemNames.banana] = 0;
+                weights[itemNames.greenShell] = 0;
+                weights[itemNames.redShell] = 10;
+                weights[itemNames.mushroom] = 50;
+                weights[itemNames.blueShell] = 40;
+            }
+
+            // 重み付け抽選
+            let totalWeight = 0;
+            for (let key in weights) {
+                totalWeight += weights[key];
+            }
+
+            let random = Math.random() * totalWeight;
+            for (let key in weights) {
+                if (random < weights[key]) {
+                    return key;
+                }
+                random -= weights[key];
+            }
+            return itemNames.mushroom; // フォールバック
+        }
+
+        // Web Audio APIの初期化
+        function initAudio() {
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+            } catch (e) {
+                console.warn("Web Audio API is not supported in this browser.");
+            }
+        }
+
+        // 回転中のレトロなピコピコ音
+        function playTickSound() {
+            if (!audioCtx) return;
+            try {
+                const t = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                
+                osc.type = 'square'; // レトロ感を出すために矩形波
+                osc.frequency.setValueAtTime(1000, t);
+                osc.frequency.exponentialRampToValueAtTime(600, t + 0.03); 
+                
+                gain.gain.setValueAtTime(0.1, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                osc.start(t);
+                osc.stop(t + 0.05);
+            } catch(e) {}
+        }
+
+        // 決定時のファンファーレ音
+        function playFanfareSound() {
+            if (!audioCtx) return;
+            try {
+                const t = audioCtx.currentTime;
+                const notes = [
+                    { freq: 523.25, time: 0 },    // C5
+                    { freq: 659.25, time: 0.08 }, // E5
+                    { freq: 783.99, time: 0.16 }, // G5
+                    { freq: 1046.50, time: 0.24 } // C6
+                ];
+                
+                notes.forEach(note => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    
+                    osc.type = 'triangle';
+                    osc.frequency.value = note.freq;
+                    
+                    gain.gain.setValueAtTime(0, t + note.time);
+                    gain.gain.linearRampToValueAtTime(0.2, t + note.time + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.01, t + note.time + 0.5);
+                    
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    
+                    osc.start(t + note.time);
+                    osc.stop(t + note.time + 0.6);
+                });
+            } catch(e) {}
+        }
+
+        // イージング関数（easeOutQuart: 最初速く、最後ゆっくり）
+        function easeOutQuart(x) {
+            return 1 - Math.pow(1 - x, 4);
+        }
+
+        // ルーレット開始処理
+        function startRoulette() {
+            if (isSpinning) return;
+            isSpinning = true;
+            startBtn.disabled = true;
+            const radios = document.querySelectorAll('input[name="rank"]');
+            radios.forEach(r => r.disabled = true);
+            
+            initAudio();
+
+            // 1. 順位の取得とアイテムの決定
+            const currentRank = parseInt(document.querySelector('input[name="rank"]:checked').value, 10);
+            const resultItem = determineWinningItem(currentRank);
+            
+            // 2. アニメーション用のダミーリストを生成（約40個のアイテムを回す）
+            const spinCount = 40 + Math.floor(Math.random() * 5);
+            const domList = [currentItem];
+            
+            for (let i = 0; i < spinCount; i++) {
+                domList.push(items[Math.floor(Math.random() * items.length)]);
+            }
+            domList.push(resultItem); // 最後に必ず当たりアイテムを配置
+            
+            // DOMに反映
+            renderSlot(domList);
+            slotContainer.style.transform = `translateY(0px)`;
+            
+            // モーションブラークラスを追加（高速回転の演出）
+            slotContainer.classList.add('is-spinning-fast');
+
+            // 3. アニメーションの計算
+            const targetY = (domList.length - 1) * itemHeight;
+            const duration = 3500; // 約3.5秒かけて回る
+            let startTime = null;
+            let lastTickIndex = 0;
+
+            // アニメーションループ
+            function animate(currentTime) {
+                if (!startTime) startTime = currentTime;
+                const elapsed = currentTime - startTime;
+                let progress = elapsed / duration;
+                
+                if (progress > 1) progress = 1;
+                
+                const ease = easeOutQuart(progress);
+                const currentY = targetY * ease;
+                
+                slotContainer.style.transform = `translateY(-${currentY}px)`;
+                
+                // アイテム通過判定と効果音
+                const currentIndex = Math.floor(currentY / itemHeight);
+                if (currentIndex > lastTickIndex && progress < 1) {
+                    lastTickIndex = currentIndex;
+                    // 後半遅くなった時は音を控えめにするなど調整可能
+                    playTickSound();
+                }
+
+                // 速度が落ちてきたらモーションブラーを解除 (進捗80%付近)
+                if (progress > 0.8 && slotContainer.classList.contains('is-spinning-fast')) {
+                    slotContainer.classList.remove('is-spinning-fast');
+                }
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    // 回転終了時の処理
+                    currentItem = resultItem;
+                    
+                    // 次回用にDOMを整理（現在表示されている1枚だけにする）
+                    renderSlot([currentItem]);
+                    slotContainer.style.transform = `translateY(0px)`;
+                    
+                    playFanfareSound();
+                    isSpinning = false;
+                    startBtn.disabled = false;
+                    const radios = document.querySelectorAll('input[name="rank"]');
+                    radios.forEach(r => r.disabled = false);
+                }
+            }
+            
+            // アニメーション開始
+            requestAnimationFrame(animate);
+        }
+
+        // 初期化とイベントリスナーの登録
+        init();
+        startBtn.addEventListener('click', startRoulette);
+
+    </script>
+</body>
+</html>
